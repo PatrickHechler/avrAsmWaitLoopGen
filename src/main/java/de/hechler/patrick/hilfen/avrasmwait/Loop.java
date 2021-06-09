@@ -77,8 +77,8 @@ public class Loop {
 	
 	public BigInteger calculateTicks(BigInteger setup, BigInteger loopLen) {
 		BigInteger cal = loopLen;
-		cal.multiply(iterations);
-		cal.add(setup);
+		cal = cal.multiply(iterations);
+		cal = cal.add(setup);
 		return cal;
 	}
 	

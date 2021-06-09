@@ -30,22 +30,22 @@ public class CodeGenarator {
 	
 	private String  labelPrefix;
 	private String  labelSuffix;
-	private String  loopLabel;
+	private String  initLabel;
 	private boolean saveRegs;
-	private int     maxNops;
+	private BigInteger   maxNops;
 	
 	
 	
 	public CodeGenarator(String labelPrefix, String labelSuffix, boolean saveRegs, int maxNops) {
-		this(labelPrefix, labelSuffix, (labelPrefix == null ? "" : labelPrefix) + "wait" + (labelSuffix == null ? "" : labelSuffix), saveRegs, maxNops);
+		this(labelPrefix, labelSuffix, null, saveRegs, maxNops);
 	}
 	
-	public CodeGenarator(String labelPrefix, String labelSuffix, String loopLabel, boolean saveRegs, int maxNops) {
+	public CodeGenarator(String labelPrefix, String labelSuffix, String initLabel, boolean saveRegs, int maxNops) {
 		this.labelPrefix = labelPrefix == null ? "" : labelPrefix;
 		this.labelSuffix = labelSuffix == null ? "" : labelSuffix;
-		this.loopLabel = loopLabel;
+		this.initLabel = initLabel;
 		this.saveRegs = saveRegs;
-		this.maxNops = maxNops;
+		this.maxNops = genarateBI(maxNops);
 	}
 	
 	public void setSaveRegs(boolean saveRegs) {
@@ -57,14 +57,14 @@ public class CodeGenarator {
 	}
 	
 	public int getMaxNops() {
-		return maxNops;
+		return maxNops.intValue();
 	}
 	
 	public void setMaxNops(int maxNops) {
-		this.maxNops = maxNops;
+		this.maxNops = genarateBI(maxNops);
 	}
 	
-	private static BigInteger maxTicks(int regCnt, boolean saveRegs, BigInteger nops) {
+	private BigInteger maxTicks(int regCnt, boolean saveRegs, BigInteger nops) {
 		BigInteger loopLen = generateLoopLen(regCnt, nops);
 		Loop loop = new Loop(regCnt, Loop.maxIterations(regCnt));
 		BigInteger setup = generateSetupTicks(regCnt, saveRegs);
@@ -85,12 +85,15 @@ public class CodeGenarator {
 		return loopLen;
 	}
 	
-	private static BigInteger generateSetupTicks(int regCnt, boolean saveRegs) {
+	private BigInteger generateSetupTicks(int regCnt, boolean saveRegs) {
 		BigInteger setup;
 		if (saveRegs) {
 			setup = genarateBI(regCnt * 4);// push and pop need both 2 ticks
 		} else {
 			setup = BigInteger.ZERO;
+		}
+		if (initLabel != null) {
+			setup = setup.add(genarateBI(8));// call + ret
 		}
 		if (regCnt > goodRegisterCnt) {
 			setup = setup.add(genarateBI( (2 * (regCnt - goodRegisterCnt)) + goodRegisterCnt));
@@ -101,63 +104,89 @@ public class CodeGenarator {
 	}
 	
 	public void genatate(PrintStream out, BigInteger ticks) {
+		final BigInteger origTicks = ticks;
+		BigInteger setup = ticks;
 		int regs = findRegCount(ticks);
 		Loop loop = new Loop(regs);
-		ticks = ticks.subtract(generateSetupTicks(regs, saveRegs));
+		BigInteger myTicks = generateSetupTicks(regs, saveRegs);
+		setup = myTicks;
+		ticks = ticks.subtract(myTicks);
 		BigInteger nops = BigInteger.ZERO;
+		BigInteger singleLoopLen;
 		BigInteger[] zw;
 		while (true) {
-			BigInteger singleLoopLen = generateLoopLen(regs, nops);
+			singleLoopLen = generateLoopLen(regs, nops);
 			zw = ticks.divideAndRemainder(singleLoopLen);
 			int cmp = zw[0].compareTo(Loop.maxIterations(regs));
 			if (cmp < 0) {
 				loop.setIterations(zw[0]);
 				break;
-			} else if (cmp == 0) {
-				if (zw[1].signum() <= 0) {
-					loop.setIterations(zw[0]);
-					break;
-				}
+			}
+			if (cmp == 0 && zw[1].signum() <= 0) {
+				loop.setIterations(zw[0]);
+				break;
 			}
 			nops.add(BigInteger.ONE);
+			if (nops.compareTo(this.maxNops) > 0) {
+				throw new AssertionError("I can't do this!");
+			}
+		}
+		myTicks = myTicks.subtract(BigInteger.ONE);
+		setup = setup.add(singleLoopLen);
+		setup = setup.subtract(BigInteger.ONE);
+		BigInteger iters = loop.getIterations();
+		{
+			BigInteger szw = iters.multiply(singleLoopLen);
+			myTicks = szw.add(myTicks);
+		}
+		if (initLabel != null) {
+			out.println(initLabel + ":");
 		}
 		if (saveRegs) {
 			for (int i = 0; i < regs; i ++ ) {
-				out.println("\tPUSH " + register[i]);
+				out.println("\tPUSH " + register[i] + ";\t\t2t");
 			}
 		}
-		byte[] bytes = loop.getIterations().toByteArray();
+		byte[] bytes = iters.toByteArray();
 		if (regs > goodRegisterCnt) {// at first the badRegs, because they need a goodReg to overwrite
 			for (int i = goodRegisterCnt + 1; i < regs; i ++ ) {
-				out.println("\tLDI " + register[0] + ", 0x" + Integer.toHexString( ((int) bytes[i]) & 0xFF));
-				out.println("\tMOV " + register[i] + ", " + register[0]);
+				out.println("\tLDI " + register[0] + ", 0x" + Integer.toHexString( ((int) bytes[i]) & 0xFF) + ";\t1t");
+				out.println("\tMOV " + register[i] + ", " + register[0] + ";\t1t");
 			}
 		}
 		for (int i = 0; i < regs && i < goodRegisterCnt; i ++ ) {
-			out.println("\tLDI " + register[i] + ", 0x" + Integer.toHexString( ((int) bytes[i]) & 0xFF));
+			out.println("\tLDI " + register[i] + ", 0x" + Integer.toHexString( ((int) bytes[i]) & 0xFF) + ";\t1t");
 		}
+		String loopLabel = initLabel + "_loop" + labelSuffix;
 		out.println(loopLabel + ":");
-		out.println("\tDEC " + register[0]);
+		out.println("\tDEC " + register[0] + ";\t\t1t");
 		for (int i = 1; i < regs && i < goodRegisterCnt; i ++ ) {
-			out.println("\tSBCI " + register[i] + ", 0");
+			out.println("\tSBCI " + register[i] + ", 0;\t1t");
 		}
 		for (int i = goodRegisterCnt; i < regs; i ++ ) {
 			String noCarryLabel = labelPrefix + "noCarryBy" + i + labelSuffix;
-			out.println("\tBRCC " + noCarryLabel);
-			out.println("\tDEC " + register[i]);
+			out.println("\tBRCC " + noCarryLabel + ";\t1/2t 2 if jmp and 1 if nop");
+			out.println("\tDEC " + register[i] + ";\t\t1t");
 			out.println(noCarryLabel + ":");
 		}
-		out.println("\tBRCC " + loopLabel);
+		out.println("\tBRCC " + loopLabel + ";\t1/2t 2 if jmp and 1 if nop");
 		if (saveRegs) {
 			for (int i = 0; i < regs; i ++ ) {
-				out.println("\tPOP " + register[i]);
+				out.println("\tPOP " + register[i] + ";\t\t2t");
 			}
 		}
-		out.println("\tRET");
+		if (initLabel != null) {
+			out.println("\tRET;\t\t\t4t");
+		}
+		out.println(";wanted: DEC[" + origTicks.toString(10) + "]");
+		out.println(";all together: DEC[" + myTicks.toString(10) + "]");
+		out.println(";each loop: DEC[" + singleLoopLen.toString(10) + "]");
+		out.println(";loop count: DEC[" + iters.toString(10) + "]");
+		out.println(";one time: DEC[" + setup.toString(10) + "]");
 	}
 	
 	private int findRegCount(BigInteger ticks) {
-		BigInteger nops = genarateBI(maxNops);
+		BigInteger nops = maxNops;
 		BigInteger maxTicks = null;
 		for (int regs = MIN_REG_CNT; regs < MAX_REG_CNT; regs ++ ) {
 			maxTicks = maxTicks(regs, saveRegs, nops);
