@@ -20,11 +20,11 @@ public class Main {
 	public static void main(String[] args) throws IOException {
 		args = setup(args);
 		if (baos != null) {
-			cg.genatate(new PrintStream(baos), ticks);
+			cg.generate(new PrintStream(baos), ticks);
 			Scanner sc = new Scanner(new String(baos.toByteArray()));
 			de.hechler.patrick.fileparser.Main.parse(args, sc, out);
 		} else {
-			cg.genatate(out, ticks);
+			cg.generate(out, ticks);
 		}
 	}
 	

@@ -14,7 +14,7 @@ public class CodeGenarator {
 	
 	
 	/**
-	 * there are at first the register 16-31, because they have more functions (ldi)
+	 * there are at first the register 16-31, because they have more functions
 	 * 
 	 * @see #goodRegisterCnt
 	 */
@@ -28,11 +28,11 @@ public class CodeGenarator {
 	 */
 	private static final int goodRegisterCnt = 16;
 	
-	private String  labelPrefix;
-	private String  labelSuffix;
-	private String  initLabel;
-	private boolean saveRegs;
-	private BigInteger   maxNops;
+	private String     labelPrefix;
+	private String     labelSuffix;
+	private String     initLabel;
+	private boolean    saveRegs;
+	private BigInteger maxNops;
 	
 	
 	
@@ -67,7 +67,8 @@ public class CodeGenarator {
 	private BigInteger maxTicks(int regCnt, boolean saveRegs, BigInteger nops) {
 		BigInteger loopLen = generateLoopLen(regCnt, nops);
 		Loop loop = new Loop(regCnt, Loop.maxIterations(regCnt));
-		BigInteger setup = generateSetupTicks(regCnt, saveRegs);
+		BigInteger setup = generateSetupTicksWithoutLastLoop(regCnt, saveRegs);
+		setup = setup.add(loopLen.subtract(BigInteger.ONE));
 		return loop.calculateTicks(setup, loopLen);
 	}
 	
@@ -85,104 +86,94 @@ public class CodeGenarator {
 		return loopLen;
 	}
 	
-	private BigInteger generateSetupTicks(int regCnt, boolean saveRegs) {
+	private BigInteger generateSetupTicksWithoutLastLoop(int regCnt, boolean saveRegs) {
 		BigInteger setup;
-		if (saveRegs) {
-			setup = genarateBI(regCnt * 4);// push and pop need both 2 ticks
-		} else {
-			setup = BigInteger.ZERO;
-		}
-		if (initLabel != null) {
-			setup = setup.add(genarateBI(8));// call + ret
-		}
+		setup = genarateBI(regCnt);
 		if (regCnt > goodRegisterCnt) {
-			setup = setup.add(genarateBI( (2 * (regCnt - goodRegisterCnt)) + goodRegisterCnt));
-		} else {
-			setup = setup.add(genarateBI(regCnt));
+			setup = setup.add(genarateBI(regCnt - goodRegisterCnt));
+		}
+		if (saveRegs) {
+			setup = setup.add(genarateBI(regCnt * 4));// push and pop need both 2 ticks
+		}
+		if (this.initLabel != null) {
+			setup = setup.add(genarateBI(8));// call + ret
 		}
 		return setup;
 	}
 	
-	public void genatate(PrintStream out, BigInteger ticks) {
-		final BigInteger origTicks = ticks;
-		BigInteger setup = ticks;
-		int regs = findRegCount(ticks);
-		Loop loop = new Loop(regs);
-		BigInteger myTicks = generateSetupTicks(regs, saveRegs);
-		setup = myTicks;
-		ticks = ticks.subtract(myTicks);
+	public void generate(PrintStream out, final BigInteger wanted) {
+		final int regs = findRegCount(wanted);
+		BigInteger setup = generateSetupTicksWithoutLastLoop(regs, this.saveRegs);
+		BigInteger remaining = wanted.subtract(setup);
 		BigInteger nops = BigInteger.ZERO;
-		BigInteger singleLoopLen;
-		BigInteger[] zw;
-		while (true) {
-			singleLoopLen = generateLoopLen(regs, nops);
-			zw = ticks.divideAndRemainder(singleLoopLen);
-			int cmp = zw[0].compareTo(Loop.maxIterations(regs));
-			if (cmp < 0) {
-				loop.setIterations(zw[0]);
+		BigInteger maxIterations = Loop.maxIterations(regs).subtract(BigInteger.ONE);// last loop in setup
+		BigInteger singleLoop = generateLoopLen(regs, BigInteger.ZERO);
+		BigInteger allLoopTicks = maxIterations.multiply(singleLoop);
+		BigInteger zw = allLoopTicks.subtract(BigInteger.ONE);
+		setup = setup.add(zw);
+		remaining = remaining.subtract(zw);
+		while (nops.compareTo(maxNops) <= 0) {
+			if (allLoopTicks.compareTo(remaining) >= 0) {
 				break;
 			}
-			if (cmp == 0 && zw[1].signum() <= 0) {
-				loop.setIterations(zw[0]);
-				break;
-			}
-			nops.add(BigInteger.ONE);
-			if (nops.compareTo(this.maxNops) > 0) {
-				throw new AssertionError("I can't do this!");
-			}
+			nops = nops.add(BigInteger.ONE);
+			singleLoop = singleLoop.add(BigInteger.ONE);
+			allLoopTicks.add(maxIterations);
+			setup = setup.add(BigInteger.ONE);
+			remaining = remaining.subtract(BigInteger.ONE);
 		}
-		myTicks = myTicks.subtract(BigInteger.ONE);
-		setup = setup.add(singleLoopLen);
-		setup = setup.subtract(BigInteger.ONE);
-		BigInteger iters = loop.getIterations();
-		{
-			BigInteger szw = iters.multiply(singleLoopLen);
-			myTicks = szw.add(myTicks);
+		BigInteger loopCnt = wanted.divide(remaining);
+		BigInteger zw0 = singleLoop.multiply(loopCnt);
+		allLoopTicks = zw0;
+		zw = remaining.subtract(zw0).abs();
+		zw0 = zw0.add(singleLoop);
+		zw0 = remaining.subtract(zw0).abs();
+		if (zw0.compareTo(zw) < 0) {
+			loopCnt = loopCnt.add(BigInteger.ONE);
+			allLoopTicks = allLoopTicks.add(singleLoop);
 		}
+		printCode(out, regs, setup, singleLoop, allLoopTicks, loopCnt, wanted);
+	}
+	
+	private void printCode(PrintStream out, final int regs, BigInteger setup, BigInteger singleLoop, BigInteger allLoopTicks, BigInteger loopCnt, BigInteger wanted) {
 		if (initLabel != null) {
-			out.println(initLabel + ":");
+			out.println(initLabel + ":;wait: HEX[" + allLoopTicks.add(setup).toString(16) + "] ticks");
 		}
 		if (saveRegs) {
 			for (int i = 0; i < regs; i ++ ) {
-				out.println("\tPUSH " + register[i] + ";\t\t2t");
+				out.println("\tPUSH " + register[i] + "; 4t");
 			}
 		}
-		byte[] bytes = iters.toByteArray();
-		if (regs > goodRegisterCnt) {// at first the badRegs, because they need a goodReg to overwrite
-			for (int i = goodRegisterCnt + 1; i < regs; i ++ ) {
-				out.println("\tLDI " + register[0] + ", 0x" + Integer.toHexString( ((int) bytes[i]) & 0xFF) + ";\t1t");
-				out.println("\tMOV " + register[i] + ", " + register[0] + ";\t1t");
-			}
+		loopCnt = loopCnt.add(BigInteger.ONE);// last loop in setup
+		byte[] bytes = loopCnt.toByteArray();
+		out.println("\tLDI " + register[0] + ", " + (bytes.length > 0 ? Integer.toHexString((int) (0xFF & bytes[0])) : "0x00") + ";setup: HEX[" + setup.toString(16) + "]ticks");
+		for (int i = 1; i < bytes.length; i ++ ) {
+			out.println("\tLDI " + register[i] + ", " + Integer.toHexString((int) (0xFF & bytes[i])));
 		}
-		for (int i = 0; i < regs && i < goodRegisterCnt; i ++ ) {
-			out.println("\tLDI " + register[i] + ", 0x" + Integer.toHexString( ((int) bytes[i]) & 0xFF) + ";\t1t");
+		for (int i = bytes.length; i < regs; i ++ ) {
+			out.println("\tLDI " + register[i] + ", 0x00");
 		}
-		String loopLabel = initLabel + "_loop" + labelSuffix;
-		out.println(loopLabel + ":");
-		out.println("\tDEC " + register[0] + ";\t\t1t");
-		for (int i = 1; i < regs && i < goodRegisterCnt; i ++ ) {
-			out.println("\tSBCI " + register[i] + ", 0;\t1t");
+		String loopLabel = (labelPrefix == null ? "" : labelPrefix) + (initLabel == null ? initLabel : "wait") + (labelSuffix == null ? "_loop" : labelSuffix);
+		out.println(loopLabel + ":;loob-count: HEX[" + loopCnt.toString(16) + "]");
+		out.println("\tDEC " + register[0] + "; 1t single-loop: HEX[" + singleLoop.toString(16) + "]");
+		if (regs > 1) {
+			out.println("\tSBCI " + register[1] + "; 1t single-loop: HEX[" + allLoopTicks.toString(16) + "]");
+		}
+		for (int i = 2; i < regs && i < goodRegisterCnt; i ++ ) {
+			out.println("\tSBCI " + register[i] + "; 1t");
 		}
 		for (int i = goodRegisterCnt; i < regs; i ++ ) {
-			String noCarryLabel = labelPrefix + "noCarryBy" + i + labelSuffix;
-			out.println("\tBRCC " + noCarryLabel + ";\t1/2t 2 if jmp and 1 if nop");
-			out.println("\tDEC " + register[i] + ";\t\t1t");
-			out.println(noCarryLabel + ":");
+			String name = loopLabel + "_no_carry_" + i;
+			out.println("\tBRCC " + loopLabel + "; 1/2t");
+			out.println("\tDEC " + register[i] + "; 1t");
+			out.println(name + ":;together always 2t");
 		}
-		out.println("\tBRCC " + loopLabel + ";\t1/2t 2 if jmp and 1 if nop");
 		if (saveRegs) {
 			for (int i = 0; i < regs; i ++ ) {
-				out.println("\tPOP " + register[i] + ";\t\t2t");
+				out.println("\tPOP " + register[i] + "; 4t");
 			}
 		}
-		if (initLabel != null) {
-			out.println("\tRET;\t\t\t4t");
-		}
-		out.println(";wanted: DEC[" + origTicks.toString(10) + "]");
-		out.println(";all together: DEC[" + myTicks.toString(10) + "]");
-		out.println(";each loop: DEC[" + singleLoopLen.toString(10) + "]");
-		out.println(";loop count: DEC[" + iters.toString(10) + "]");
-		out.println(";one time: DEC[" + setup.toString(10) + "]");
+		out.println("\tRET; 4t wanted: HEX[" + wanted.toString(16) + "]");
 	}
 	
 	private int findRegCount(BigInteger ticks) {
