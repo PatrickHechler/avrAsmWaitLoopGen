@@ -3,7 +3,7 @@ package de.hechler.patrick.hilfen.avrasmwait.alt;
 import java.io.PrintStream;
 import java.math.BigInteger;
 
-import de.hechler.patrick.hilfen.avrasmwait.Loop;
+import de.hechler.patrick.hilfen.avrasmwait.objects.Loop;
 
 public class CodeGenarator {
 	

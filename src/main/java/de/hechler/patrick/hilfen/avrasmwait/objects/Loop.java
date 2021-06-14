@@ -1,8 +1,8 @@
-package de.hechler.patrick.hilfen.avrasmwait;
+package de.hechler.patrick.hilfen.avrasmwait.objects;
 
 import java.math.BigInteger;
 
-import de.hechler.patrick.hilfen.avrasmwait.alt.CodeGenarator;
+import de.hechler.patrick.hilfen.avrasmwait.interfaces.CodeGenerator;
 
 public class Loop {
 	
@@ -133,10 +133,10 @@ public class Loop {
 	}
 	
 	private void validate(BigInteger iterations, int registers) throws IllegalArgumentException, IndexOutOfBoundsException {
-		if (registers > CodeGenarator.MAX_REG_CNT) {
-			throw new IllegalArgumentException("too many registers: " + registers + " max=" + CodeGenarator.MAX_REG_CNT);
-		} else if (registers < CodeGenarator.MIN_REG_CNT) {
-			throw new IllegalArgumentException("too less registers: " + registers + " min=" + CodeGenarator.MIN_REG_CNT);
+		if (registers > CodeGenerator.MAX_REG_CNT) {
+			throw new IllegalArgumentException("too many registers: " + registers + " max=" + CodeGenerator.MAX_REG_CNT);
+		} else if (registers < CodeGenerator.MIN_REG_CNT) {
+			throw new IllegalArgumentException("too less registers: " + registers + " min=" + CodeGenerator.MIN_REG_CNT);
 		}
 		BigInteger max = maxIterations(registers);
 		if (iterations.compareTo(max) > 0) {
