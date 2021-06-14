@@ -1,7 +1,9 @@
-package de.hechler.patrick.hilfen.avrasmwait;
+package de.hechler.patrick.hilfen.avrasmwait.alt;
 
 import java.io.PrintStream;
 import java.math.BigInteger;
+
+import de.hechler.patrick.hilfen.avrasmwait.Loop;
 
 public class CodeGenarator {
 	
@@ -155,7 +157,7 @@ public class CodeGenarator {
 		}
 		String loopLabel = (labelPrefix == null ? "" : labelPrefix) + (initLabel == null ? initLabel : "wait") + (labelSuffix == null ? "_loop" : labelSuffix);
 		out.println(loopLabel + ":;loob-count: HEX[" + loopCnt.toString(16) + "]");
-		out.println("\tDEC " + register[0] + "; 1t single-loop: HEX[" + singleLoop.toString(16) + "]");
+		out.println("\tSUBI " + register[0] + "; 1; 1t single-loop: HEX[" + singleLoop.toString(16) + "]");
 		if (regs > 1) {
 			out.println("\tSBCI " + register[1] + "; 1t single-loop: HEX[" + allLoopTicks.toString(16) + "]");
 		}

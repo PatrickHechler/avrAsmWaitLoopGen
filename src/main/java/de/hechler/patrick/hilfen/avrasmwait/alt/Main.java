@@ -1,4 +1,4 @@
-package de.hechler.patrick.hilfen.avrasmwait;
+package de.hechler.patrick.hilfen.avrasmwait.alt;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -316,7 +316,7 @@ public class Main {
 		out.println("          ticks <- seconds <- minutes <- hours <- days <- jears");
 		out.println("<-parser> ...");
 		out.println("          to let after the code genaration the parser parse with the following args");
-		out.println("          if there is a src or target file defined in the parser args they will be ignored");
+		out.println("          if there is a src or target file defined in the parser args the Parser will most likly crash and if not they will be ignored");
 		out.println("<-target> or <-dest> [FILE]");
 		out.println("          to define the target of the code generation");
 		out.println("          if no target is defined it will output the generated code in the defaut out stream");

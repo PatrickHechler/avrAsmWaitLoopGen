@@ -2,41 +2,91 @@ package de.hechler.patrick.hilfen.avrasmwait;
 
 import java.math.BigInteger;
 
+import de.hechler.patrick.hilfen.avrasmwait.alt.CodeGenarator;
+
 public class Loop {
 	
 	private static final BigInteger[] MAX_ITERATIONS = new BigInteger[] {
-		new BigInteger(1, new byte[] { -1 }),
-		new BigInteger(1, new byte[] { -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
-		new BigInteger(1, new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }),
+		new BigInteger(1, new byte[] { 1 
+			,0
+			}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0,0,0 ,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0,0,0 ,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0,0,0 ,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0,0,0 ,0,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0,0,0 ,0,0,0,0,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0
+		}),
+		new BigInteger(1, new byte[] { 1 
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0,0,0,0 ,0,0,0,0,0
+			,0,0
+		}),
 	};
 	
 	private int        registers;
@@ -99,4 +149,3 @@ public class Loop {
 	}
 	
 }
-
