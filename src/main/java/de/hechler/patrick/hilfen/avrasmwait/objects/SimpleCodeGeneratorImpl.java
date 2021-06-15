@@ -18,6 +18,7 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 	private final boolean     saveRegs;
 	private final String      loopLabel;
 	private final boolean     crashOnWrongname;
+	private final int         nops;
 	private final BigInteger  maxTicks;
 	private final BigInteger  setupTicks;
 	private final BigInteger  loopTicks;
@@ -25,26 +26,28 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 	
 	
 	
-	private SimpleCodeGeneratorImpl(PrintStream out, int firstReg, int regCnt, boolean saveRegs, String loopLabel, boolean crashOnWrongname) {
+	private SimpleCodeGeneratorImpl(PrintStream out, int firstReg, int regCnt, boolean saveRegs, String loopLabel, boolean crashOnWrongname, BigInteger nops) {
 		this.out = out;
 		this.firstReg = firstReg;
 		this.regCnt = regCnt;
 		this.saveRegs = saveRegs;
 		this.loopLabel = loopLabel;
 		this.crashOnWrongname = crashOnWrongname;
-		this.eachLoop = BigInteger.valueOf(/* SUBI first + SBCI other */regCnt + /* BRCC */2);
+		this.nops = nops.intValue();
+		this.eachLoop = BigInteger.valueOf(/* SUBI first + SBCI other */regCnt + /* BRCC */2).add(nops);
 		BigInteger zw = Loop.maxIterations(regCnt);
 		zw = zw.subtract(BigInteger.ONE);
 		this.loopTicks = zw.multiply(eachLoop);
-		zw = BigInteger.valueOf( /* last loop + 1 */ (regCnt << 1) - /* last loop branch with only 1 t */ 1 + /* JMP */ 3 + /* CALL+RET */ 8);
+		zw = BigInteger.valueOf( /* last loop + 1 + init values */ (regCnt << 1) - /* last loop branch with 1 t less */ 1 + /* JMP */ 3 + /* CALL+RET */ 8);
 		if (saveRegs) {
 			zw = zw.add(BigInteger.valueOf(regCnt << 1));
 		}
+		zw = zw.add(nops);
 		this.setupTicks = zw;
 		this.maxTicks = loopTicks.add(setupTicks);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, boolean saveRegs, String loopLabel, boolean crashOnWrongname) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, boolean saveRegs, String loopLabel, boolean crashOnWrongname, int nops) {
 		if (out == null) {
 			throw new NullPointerException("null output stream on the SimpeCodeGenerator creation");
 		} else if (regCnt < MIN_REG_CNT) {
@@ -54,75 +57,147 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 		} else if (firstReg < 0) {
 			throw new IllegalArgumentException("regs can not be negative: firstReg=" + firstReg);
 		}
-		return new SimpleCodeGeneratorImpl(out, firstReg, regCnt, saveRegs, loopLabel, crashOnWrongname);
+		return new SimpleCodeGeneratorImpl(out, firstReg, regCnt, saveRegs, loopLabel, crashOnWrongname, BigInteger.valueOf((long) nops));
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, boolean saveRegs, String loopLabel) {
-		return create(out, firstReg, regCnt, saveRegs, loopLabel, true);
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, boolean saveRegs, String loopLabel, int nops) {
+		return create(out, firstReg, regCnt, saveRegs, loopLabel, true, 0);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, boolean saveRegs, String loopLabel, boolean crashOnWrongname) {
-		return create(out, 0, regCnt, saveRegs, loopLabel, crashOnWrongname);
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, boolean saveRegs, String loopLabel, boolean crashOnWrongname, int nops) {
+		return create(out, 0, regCnt, saveRegs, loopLabel, crashOnWrongname, 0);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, String loopLabel, boolean crashOnWrongname) {
-		return create(out, firstReg, regCnt, true, loopLabel, crashOnWrongname);
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, String loopLabel, boolean crashOnWrongname, int nops) {
+		return create(out, firstReg, regCnt, true, loopLabel, crashOnWrongname, 0);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, String loopLabel) {
-		return create(out, firstReg, regCnt, true, loopLabel, true);
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, String loopLabel, int nops) {
+		return create(out, firstReg, regCnt, true, loopLabel, true, 0);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, boolean saveRegs, String loopLabel) {
-		return create(out, 0, regCnt, saveRegs, loopLabel, true);
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, boolean saveRegs, String loopLabel, int nops) {
+		return create(out, 0, regCnt, saveRegs, loopLabel, true, 0);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, String loopLabel, boolean crashOnWrongname) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, String loopLabel, boolean crashOnWrongname, int nops) {
 		return create(out, 0, regCnt, true, loopLabel, crashOnWrongname);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, String loopLabel) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, String loopLabel, int nops) {
 		return create(out, 0, regCnt, true, loopLabel, true);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, boolean saveRegs, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, boolean saveRegs, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks, int nops) {
 		int regCnt = minRegCnt(maxTicks, saveRegs);
 		return create(out, firstReg, regCnt, saveRegs, loopLabel, crashOnWrongname);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, boolean saveRegs, String loopLabel, BigInteger maxTicks) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, boolean saveRegs, String loopLabel, BigInteger maxTicks, int nops) {
 		int regCnt = minRegCnt(maxTicks, saveRegs);
 		return create(out, firstReg, regCnt, saveRegs, loopLabel, true);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, boolean saveRegs, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, boolean saveRegs, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks, int nops) {
 		int regCnt = minRegCnt(maxTicks, saveRegs);
 		return create(out, 0, regCnt, saveRegs, loopLabel, crashOnWrongname);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks, int nops) {
 		int regCnt = minRegCnt(maxTicks, true);
 		return create(out, firstReg, regCnt, true, loopLabel, crashOnWrongname);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, String loopLabel, BigInteger maxTicks) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, String loopLabel, BigInteger maxTicks, int nops) {
 		int regCnt = minRegCnt(maxTicks, true);
 		return create(out, firstReg, regCnt, true, loopLabel, true);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, boolean saveRegs, String loopLabel, BigInteger maxTicks) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, boolean saveRegs, String loopLabel, BigInteger maxTicks, int nops) {
 		int regCnt = minRegCnt(maxTicks, saveRegs);
 		return create(out, 0, regCnt, saveRegs, loopLabel, true);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks, int nops) {
 		int regCnt = minRegCnt(maxTicks, true);
 		return create(out, 0, regCnt, true, loopLabel, crashOnWrongname);
 	}
 	
-	public static SimpleCodeGeneratorImpl create(PrintStream out, String loopLabel, BigInteger maxTicks) {
+	public static SimpleCodeGeneratorImpl create(PrintStream out, String loopLabel, BigInteger maxTicks, int nops) {
 		int regCnt = minRegCnt(maxTicks, true);
 		return create(out, 0, regCnt, true, loopLabel, true);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, boolean saveRegs, String loopLabel, boolean crashOnWrongname) {
+		return create(out, firstReg, regCnt, saveRegs, loopLabel, crashOnWrongname, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, boolean saveRegs, String loopLabel) {
+		return create(out, firstReg, regCnt, saveRegs, loopLabel, true, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, boolean saveRegs, String loopLabel, boolean crashOnWrongname) {
+		return create(out, 0, regCnt, saveRegs, loopLabel, crashOnWrongname, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, String loopLabel, boolean crashOnWrongname) {
+		return create(out, firstReg, regCnt, true, loopLabel, crashOnWrongname, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, int regCnt, String loopLabel) {
+		return create(out, firstReg, regCnt, true, loopLabel, true, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, boolean saveRegs, String loopLabel) {
+		return create(out, 0, regCnt, saveRegs, loopLabel, true, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, String loopLabel, boolean crashOnWrongname) {
+		return create(out, 0, regCnt, true, loopLabel, crashOnWrongname, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int regCnt, String loopLabel) {
+		return create(out, 0, regCnt, true, loopLabel, true, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, boolean saveRegs, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks) {
+		int regCnt = minRegCnt(maxTicks, saveRegs);
+		return create(out, firstReg, regCnt, saveRegs, loopLabel, crashOnWrongname, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, boolean saveRegs, String loopLabel, BigInteger maxTicks) {
+		int regCnt = minRegCnt(maxTicks, saveRegs);
+		return create(out, firstReg, regCnt, saveRegs, loopLabel, true, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, boolean saveRegs, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks) {
+		int regCnt = minRegCnt(maxTicks, saveRegs);
+		return create(out, 0, regCnt, saveRegs, loopLabel, crashOnWrongname, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks) {
+		int regCnt = minRegCnt(maxTicks, true);
+		return create(out, firstReg, regCnt, true, loopLabel, crashOnWrongname, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, int firstReg, String loopLabel, BigInteger maxTicks) {
+		int regCnt = minRegCnt(maxTicks, true);
+		return create(out, firstReg, regCnt, true, loopLabel, true, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, boolean saveRegs, String loopLabel, BigInteger maxTicks) {
+		int regCnt = minRegCnt(maxTicks, saveRegs);
+		return create(out, 0, regCnt, saveRegs, loopLabel, true, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, String loopLabel, boolean crashOnWrongname, BigInteger maxTicks) {
+		int regCnt = minRegCnt(maxTicks, true);
+		return create(out, 0, regCnt, true, loopLabel, crashOnWrongname, 0);
+	}
+	
+	public static SimpleCodeGeneratorImpl create(PrintStream out, String loopLabel, BigInteger maxTicks) {
+		int regCnt = minRegCnt(maxTicks, true);
+		return create(out, 0, regCnt, true, loopLabel, true, 0);
 	}
 	
 	private static final int minRegCnt(BigInteger ticks, boolean saveRegs) {
@@ -210,6 +285,10 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 	
 	@Override
 	public void generateLoop() {
+		out.println(loopLabel + ":");
+		for (int i = 0; i < nops; i ++ ) {
+			out.println("\tNOP");
+		}
 		out.println("\tSUBI " + CodeGenerator.register(firstReg) + ", 1; DEC does not set the Carry");
 		for (int i = 1; i < regCnt; i ++ ) {
 			out.println("\tSBCI " + CodeGenerator.register(i + firstReg) + ", 0");
