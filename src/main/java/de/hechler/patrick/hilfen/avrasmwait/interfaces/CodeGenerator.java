@@ -26,7 +26,7 @@ public interface CodeGenerator {
 	 *            the intern register number
 	 * @return the extern {@link String} register
 	 */
-	static String register(int reg) {
+	public static String register(int reg) {
 		if (reg < 0) {
 			throw new IndexOutOfBoundsException("no negative reg: " + reg);
 		} else if (reg >= MAX_REG_CNT) {
