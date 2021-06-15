@@ -2,6 +2,7 @@ package de.hechler.patrick.hilfen.avrasmwait.objects;
 
 import java.io.PrintStream;
 import java.math.BigInteger;
+import java.util.Iterator;
 import java.util.Set;
 
 import de.hechler.patrick.hilfen.avrasmwait.interfaces.CodeGenerator;
@@ -52,7 +53,7 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 			throw new NullPointerException("null output stream on the SimpeCodeGenerator creation");
 		} else if (regCnt < MIN_REG_CNT) {
 			throw new IllegalArgumentException("regCnt to small: regCnt=" + regCnt + " MIN_REG_CNT=" + MIN_REG_CNT);
-		} else if (regCnt + firstReg < GOOD_REGISTER_CNT) {
+		} else if (regCnt + firstReg > GOOD_REGISTER_CNT) {
 			throw new IllegalArgumentException("I refuse to use not good regs! regCnt=" + regCnt + " firstReg=" + firstReg + " GOOD_REG_CNT=" + GOOD_REGISTER_CNT);
 		} else if (firstReg < 0) {
 			throw new IllegalArgumentException("regs can not be negative: firstReg=" + firstReg);
@@ -247,9 +248,9 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 	@Override
 	public String generateInit(BigInteger ticks, Set <String> alreadyUsed) {
 		String label = loopLabel + "_HEX_" + ticks.toString(16);
-		while ( !alreadyUsed.add(label)) {
+		while ( !alreadyUsed.add(label) || label.equals(loopLabel)) {
 			if (crashOnWrongname) {
-				throw new AssertionError("label-name already used: '" + label + "' used: '" + alreadyUsed + "'");
+				throw new AssertionError("label-name already used: '" + label + "' used: '" + alreadyUsed + "' loop-label: '" + loopLabel + "'");
 			}
 			label = label + "_";
 		}
@@ -259,25 +260,33 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 	
 	@Override
 	public void generateInit(BigInteger ticks, String initLabelName) {
+		if (loopLabel.equals(initLabelName)) {
+			throw new AssertionError("label-name already used as the loop-label: '" + initLabelName + "' loop-label: '" + loopLabel + "'");
+		}
 		if (ticks.compareTo(maxTicks) > 0) {
 			throw new IllegalArgumentException("too large value: maxTicks= HEX[" + maxTicks.toString(16) + "] ticks=HEX[" + ticks.toString(16) + "]");
 		}
 		ticks = ticks.subtract(setupTicks);
-		byte[] bytes = ticks.divide(eachLoop).toByteArray();
+		ticks = ticks.divide(eachLoop);
+		byte[] bytes = ticks.toByteArray();
 		if (bytes.length < regCnt) {
 			byte[] zw = new byte[regCnt];
-			System.arraycopy(bytes, 0, zw, 0, bytes.length);
+			System.arraycopy(bytes, 0, zw, regCnt - bytes.length, bytes.length);
 			bytes = zw;
 		}
 		out.println(initLabelName + ":");
 		for (int i = 0; i < regCnt; i ++ ) {
-			int val = (int) bytes[i];
+			int val = (int) bytes[regCnt - i - 1];
 			val = val & 0xFF;
 			String str = Integer.toHexString(val);
+			String regName = CodeGenerator.register(i + firstReg);
+			if (saveRegs) {
+				out.println("\tPUSH " + regName);
+			}
 			if (str.length() > 1) {
-				out.println("\tLDI " + CodeGenerator.register(i + firstReg) + ", 0x" + str);
+				out.println("\tLDI " + regName + ", 0x" + str);
 			} else {
-				out.println("\tLDI " + CodeGenerator.register(i + firstReg) + ", 0x0" + str);
+				out.println("\tLDI " + regName + ", 0x0" + str);
 			}
 		}
 		out.println("\tJMP " + loopLabel);
@@ -294,6 +303,11 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 			out.println("\tSBCI " + CodeGenerator.register(i + firstReg) + ", 0");
 		}
 		out.println("\tBRCC " + loopLabel);
+		if (saveRegs) {
+			for (int i = 1; i <= regCnt; i ++ ) {
+				out.println("\tPOP " + CodeGenerator.register(regCnt - i + firstReg));
+			}
+		}
 		out.println("\tRET");
 	}
 	
