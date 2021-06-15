@@ -2,7 +2,6 @@ package de.hechler.patrick.hilfen.avrasmwait.objects;
 
 import java.io.PrintStream;
 import java.math.BigInteger;
-import java.util.Iterator;
 import java.util.Set;
 
 import de.hechler.patrick.hilfen.avrasmwait.interfaces.CodeGenerator;
