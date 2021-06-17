@@ -11,7 +11,7 @@ import java.util.List;
 
 import de.hechler.patrick.hilfen.avrasmwait.interfaces.CodeGenerator;
 import de.hechler.patrick.hilfen.avrasmwait.objects.SimpleCodeGeneratorImpl;
-import de.hechler.patrick.hilfen.gui.GUIFenster;
+import de.hechler.patrick.hilfen.gui.alt.GUIFenster;
 
 public class Main {
 	

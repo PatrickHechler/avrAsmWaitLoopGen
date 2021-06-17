@@ -1,4 +1,4 @@
-package de.hechler.patrick.hilfen.gui.annotations.values;
+package de.hechler.patrick.hilfen.gui.alt.annotations.others;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

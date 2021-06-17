@@ -1,4 +1,4 @@
-package de.hechler.patrick.hilfen.gui;
+package de.hechler.patrick.hilfen.gui.interfaces;
 
 
 public interface MainMethod {
