@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import de.hechler.patrick.hilfen.autoarggui.objects.AutoGUIFenster;
 import de.hechler.patrick.hilfen.avrasmwait.interfaces.CodeGenerator;
 import de.hechler.patrick.hilfen.avrasmwait.objects.SimpleCodeGeneratorImpl;
-import de.hechler.patrick.hilfen.gui.alt.GUIFenster;
 
 public class Main {
 	
@@ -25,7 +25,8 @@ public class Main {
 		try {
 			if (args.length == 0) {
 				System.err.println("[LOG] no args start gui");
-				new GUIFenster(new ArgContainer(), args0 -> main(args0)).load("ENTER ARGS");
+//				new GUIFenster(new ArgContainer(), args0 -> main(args0)).load("ENTER ARGS");
+				new AutoGUIFenster(Main::main, new ArgContainer()).load("ENTER ARGS");;
 				return;
 			}
 			setup(args);
