@@ -272,7 +272,7 @@ public class ArgContainer implements Arguments {
 		
 		@Override
 		public GUIArt[] arten() {
-			return new GUIArt[] {GUIArt.unmodifiableText, GUIArt.comboBoxTrueFalse };
+			return new GUIArt[] {GUIArt.unmodifiableText, GUIArt.comboBoxFalseTrue};
 		}
 		
 		@Override
