@@ -1,10 +1,8 @@
 package de.hechler.patrick.hilfen.avrasmwait;
 
 import java.math.BigInteger;
-import java.security.Guard;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 import de.hechler.patrick.hilfen.autoarggui.enums.GUIArt;
@@ -70,13 +68,12 @@ public class ArgContainer implements Arguments {
 	private static final int NOSAFE     = 6;
 	private static final int LINE_COUNT = 7;
 	
-	private Line[] lines;
+	private transient Line[] lines;
+	
+	private static final List <ArgContainer> ALL = new ArrayList <>();
 	
 	public ArgContainer() {
 		lines = new Line[LINE_COUNT];
-	}
-	
-	public ArgContainer load() {
 		lines[TARGET] = new TargetLine();
 		lines[FORCE] = new ForceLine();
 		lines[LOOP] = new LoopLine();
@@ -84,7 +81,8 @@ public class ArgContainer implements Arguments {
 		lines[REGS] = new RegsLine();
 		lines[NOPS] = new NopsLine();
 		lines[NOSAFE] = new NosafeLine();
-		return this;
+		ALL.add(this);
+		System.out.println(ALL);
 	}
 	
 	@Override
@@ -158,7 +156,7 @@ public class ArgContainer implements Arguments {
 	public class TargetLine extends AbstractLine {
 		
 		public TargetLine() {
-			super(new String[][] {{"del target" }, {"choose target" }, {"no file" } });
+			super(new String[][] {{"del target" }, {"choose target", "Target file" }, {"no file" } });
 		}
 		
 		@Override
@@ -168,37 +166,25 @@ public class ArgContainer implements Arguments {
 		
 		@Override
 		public Object getValue(int index) {
-			if (index == 2) {
-				return target;
-			} else {
-				return null;
-			}
+			return target;
 		}
 		
 		@Override
 		public Class <?> getType(int index) {
-			if (index == 2 || index == 1) {
-				return String.class;
-			} else {
-				return null;
-			}
+			return String.class;
 		}
 		
 		@Override
 		public void setValue(int index, Object val) {
-			if (index == 2 || index == 1) {
-				target = (String) val;
-			} else {
-				throw new IllegalArgumentException("index=" + index + " only 1 and 2 are supported! (val='" + val + "')");
-			}
+			target = (String) val;
 		}
 		
 		@Override
 		public String[] toArgs() {
 			if (target != null) {
-				return new String[0];
-			} else {
 				return new String[] {"-target", target };
+			} else {
+				return new String[0];
 			}
 		}
 		
@@ -217,29 +203,17 @@ public class ArgContainer implements Arguments {
 		
 		@Override
 		public Object getValue(int index) {
-			if (index == 1) {
-				return regs;
-			} else {
-				return null;
-			}
+			return regs;
 		}
 		
 		@Override
 		public Class <?> getType(int index) {
-			if (index == 1) {
-				return Integer.class;
-			} else {
-				return null;
-			}
+			return Integer.class;
 		}
 		
 		@Override
 		public void setValue(int index, Object val) {
-			if (index == 1) {
-				regs = (Integer) val;
-			} else {
-				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (val='" + val + "')");
-			}
+			regs = (Integer) val;
 		}
 		
 		@Override
@@ -266,29 +240,17 @@ public class ArgContainer implements Arguments {
 		
 		@Override
 		public Object getValue(int index) {
-			if (index == 1) {
-				return nops;
-			} else {
-				return null;
-			}
+			return nops;
 		}
 		
 		@Override
 		public Class <?> getType(int index) {
-			if (index == 1) {
-				return Integer.class;
-			} else {
-				return null;
-			}
+			return Integer.class;
 		}
 		
 		@Override
 		public void setValue(int index, Object val) {
-			if (index == 1) {
-				nops = (Integer) val;
-			} else {
-				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (val='" + val + "')");
-			}
+			nops = (Integer) val;
 		}
 		
 		@Override
@@ -315,29 +277,17 @@ public class ArgContainer implements Arguments {
 		
 		@Override
 		public Object getValue(int index) {
-			if (index == 1) {
-				return nosafe;
-			} else {
-				return null;
-			}
+			return nosafe;
 		}
 		
 		@Override
 		public Class <?> getType(int index) {
-			if (index == 1) {
-				return Boolean.TYPE;
-			} else {
-				return null;
-			}
+			return Boolean.TYPE;
 		}
 		
 		@Override
 		public void setValue(int index, Object val) {
-			if (index == 1) {
-				nosafe = (boolean) (Boolean) val;
-			} else {
-				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (val='" + val + "')");
-			}
+			nosafe = (boolean) (Boolean) val;
 		}
 		
 		@Override
@@ -364,29 +314,17 @@ public class ArgContainer implements Arguments {
 		
 		@Override
 		public Object getValue(int index) {
-			if (index == 1) {
-				return loop;
-			} else {
-				return null;
-			}
+			return loop;
 		}
 		
 		@Override
 		public Class <?> getType(int index) {
-			if (index == 1) {
-				return String.class;
-			} else {
-				return null;
-			}
+			return String.class;
 		}
 		
 		@Override
 		public void setValue(int index, Object val) {
-			if (index == 1) {
-				loop = (String) val;
-			} else {
-				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (val='" + val + "')");
-			}
+			loop = (String) val;
 		}
 		
 		@Override
@@ -403,7 +341,7 @@ public class ArgContainer implements Arguments {
 	public class InitLine extends AbstractLine {
 		
 		public InitLine() {
-			super(new String[][] {{"del init lines" }, {"init lines", "add new init", "rem all inits" } });
+			super(new String[][] {{"del init lines" }, {"manage inits", "init lines", "add new init", "rem all inits" } });
 		}
 		
 		@Override
@@ -423,7 +361,7 @@ public class ArgContainer implements Arguments {
 		
 		@Override
 		public void setValue(int index, Object val) {
-			throw new UnsupportedOperationException("setValue(int,Object)");
+			throw new UnsupportedOperationException("setValue(int,Object) " + getClass().getName());
 		}
 		
 		@Override
@@ -432,6 +370,19 @@ public class ArgContainer implements Arguments {
 				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (addLine)");
 			}
 			init = Arrays.copyOf(init, init.length + 1);
+			init[init.length - 1] = new Init();
+		}
+		
+		@Override
+		public void initSubLines() {
+			if (init == null) {
+				init = new Init[0];
+			}
+			for (int i = 0; i < init.length; i ++ ) {
+				if (init[i] == null) {
+					init[i] = new Init();
+				}
+			}
 		}
 		
 		@Override
@@ -439,7 +390,7 @@ public class ArgContainer implements Arguments {
 			if (index != 1) {
 				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (addLine)");
 			}
-			init = null;
+			init = new Init[0];
 		}
 		
 		@Override
@@ -455,6 +406,20 @@ public class ArgContainer implements Arguments {
 					@Override
 					public GUIArt[] arten() {
 						return new GUIArt[] {GUIArt.deleteButton, GUIArt.modifiableText, GUIArt.comboBoxFalseTrue, GUIArt.number };
+					}
+					
+					@Override
+					public boolean hasValue(int index) {
+						switch (index) {
+						case 1:
+							return init[constI].name != null;
+						case 2:
+							return init[constI].combo != -1;
+						case 3:
+							return init[constI].time != null;
+						default:
+							throw new IllegalArgumentException("index=" + index + " only 1, 2 and 3 are supported! (addLine)");
+						}
 					}
 					
 					@Override
@@ -476,6 +441,10 @@ public class ArgContainer implements Arguments {
 					
 					@Override
 					public Object getValue(int index) {
+//						System.err.println(init);
+//						System.err.println(Arrays.deepToString(init));
+//						System.err.println(init.length);
+//						System.err.println(init[constI]);
 						switch (index) {
 						case 1:
 							return init[constI].name;
@@ -533,28 +502,25 @@ public class ArgContainer implements Arguments {
 		
 		@Override
 		public Object getValue(int index) {
-			if (index == 1) {
-				return force;
-			} else {
-				return null;
-			}
+			return force;
 		}
 		
 		@Override
 		public Class <?> getType(int index) {
-			if (index == 1) {
-				return Boolean.TYPE;
-			} else {
-				return null;
-			}
+			return Boolean.TYPE;
 		}
 		
 		@Override
 		public void setValue(int index, Object val) {
-			if (index == 1) {
-				force = (boolean) (Boolean) val;
+			force = (boolean) (Boolean) val;
+		}
+		
+		@Override
+		public String[] toArgs() {
+			if (force) {
+				return new String[] {"-force" };
 			} else {
-				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (val='" + val + "')");
+				return new String[0];
 			}
 		}
 		

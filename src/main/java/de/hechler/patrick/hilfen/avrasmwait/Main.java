@@ -25,8 +25,9 @@ public class Main {
 		try {
 			if (args.length == 0) {
 				System.err.println("[LOG] no args start gui");
-//				new GUIFenster(new ArgContainer(), args0 -> main(args0)).load("ENTER ARGS");
-				new AutoGUIFenster(Main::main, new ArgContainer()).load("ENTER ARGS");;
+				// new GUIFenster(new ArgContainer(), args0 -> main(args0)).load("ENTER ARGS");
+				// new AutoGUIFenster(Main::main, new ArgContainer().load()).load("ENTER ARGS");;
+				new AutoGUIFenster("ENTER ARGS", Main::main, new ArgContainer()).load();
 				return;
 			}
 			setup(args);
