@@ -1,98 +1,73 @@
 package de.hechler.patrick.hilfen.avrasmwait;
 
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import de.hechler.patrick.hilfen.autoarggui.enums.GUIArt;
 import de.hechler.patrick.hilfen.autoarggui.interfaces.Arguments;
 import de.hechler.patrick.hilfen.autoarggui.interfaces.Line;
 import de.hechler.patrick.hilfen.autoarggui.objects.AbstractLine;
+import de.hechler.patrick.hilfen.avrasmwait.interfaces.CodeGenerator;
 
-public class ArgContainer implements Arguments {
+@SuppressWarnings("javadoc")
+public class ArgContainer implements Arguments, Serializable {
 	
-	// <-target> or <-t> [TARGET_FILE]
-	// to set the target file to recive the generated code
-	// if no target file is set the generated code will be printed on the default out stream
-	// @Arg("-target")
-	// @GUINormalLine(firstArt = GUIArt.deleteButton, firstText = "reset", secondArt = GUIArt.fileChoose, secondText = "select", thirdArt = GUIArt.choosenFileModifiable, thirdText = "target file",
-	// order = 0)
-	private String target = null;
-	// <-force>
-	// to force overwrite if the target file exits already
-	// if no target file exits this will be ignored
-	// @Arg("-force")
-	// @GUINormalLine(firstArt = GUIArt.unmodifiableText, firstText = "force overwrite:", secondArt = GUIArt.comboBoxFalseTrue, secondText = {"exit if target exist", "force overwrite if target exist"
-	// },
-	// order = 1)
-	private boolean force = false;
-	// <-loop> or <-l> [LOOP_LABEL_NAME]
-	// to set the name of the loop-label to the given LOOP_LABEL_NAME
-	// @Arg("-loop")
-	// @GUINormalLine(firstArt = GUIArt.deleteButton, firstText = "reset the loop-label", secondArt = GUIArt.modifiableText, secondText = "your loop label", order = 2)
-	private String loop = null;
-	// (<-init> or <-i>) [INIT_LABEL_NAME] (<jear>/<j> or <day>/<d> or <hour>/<h> or <min>/<m> or <sec>/<s> or <ms> or <t>/<tick>) [TIME]
-	// @Arg("-init")
-	// @GUIOwnWindow(deleteAllText = "delete all", addNewText = "add new init label", firstArt = GUIArt.deleteButton, firstText = "delete", secondArt = GUIArt.modifiableText, secondText =
-	// "init-label-name",
-	// thirdArt = GUIArt.comboBoxTrueFalse, thirdText = {"jear (365 d)", "day (24 h)", "hour (60 m)", "min (60 s)", "sec (1.000 ms)", "ms (16.000 t)", "tick (1 t)" }, forthArt = GUIArt.number,
-	// forthText = "time count", myFirstArt = GUIArt.unmodifiableText, myFirstText = "your init-labels", mySecondArt = GUIArt.nothing, mySecondText = "manage init labels", title = "your inits", order
-	// = 3)
-	private Init[] init = null;
-	// <-regs> or <-r> [REGISTER_COUNT]
-	// to set the number of registers the loop should use
-	// if no register count is set the smallest usable register count will be used
-	// @Arg("-regs")
-	// @GUINormalLine(firstArt = GUIArt.deleteButton, firstText = "reset", secondArt = GUIArt.number, secondText = "register count", order = 4)
-	private Integer regs = null;
-	// <-nops> or <-n> [NOP_COUNT]
-	// to set the number of nops used in each iteration of the loop
-	// if no nop count is set the no nops will be used
-	// @Arg("-nops")
-	// @GUINormalLine(firstArt = GUIArt.deleteButton, firstText = "reset", secondArt = GUIArt.number, secondText = "NOP count", order = 5)
-	private Integer nops = null;
-	// <-nosafe>
-	// to supress te sasve and load of the used registers
-	// if set all used registers will have the value 255/0xFF after a loop-call
-	// @Arg("-nosafe")
-	// @GUINormalLine(firstArt = GUIArt.unmodifiableText, firstText = "safe used registers:", secondArt = GUIArt.comboBoxFalseTrue, secondText = {"safe and load them", "dont save them" }, order = 6)
-	private boolean nosafe = false;
+	private static final long serialVersionUID = -945832172930488088L;
 	
-	private static final int TARGET     = 0;
-	private static final int FORCE      = 1;
-	private static final int LOOP       = 2;
-	private static final int INIT       = 3;
-	private static final int REGS       = 4;
-	private static final int NOPS       = 5;
-	private static final int NOSAFE     = 6;
-	private static final int LINE_COUNT = 7;
+	private String              target    = null;
+	private boolean             force     = false;
+	private String              loop      = null;
+	private Init[]              init      = null;
+	private Integer             regs      = null;
+	private Integer             nops      = null;
+	private boolean             nosafe    = false;
+	private boolean             exact     = false;
+	private String              firstReg  = null;
+	private Map<String, String> modifyReg = null;
+	
+	private static final int LINE_TARGET     = 0;
+	private static final int LINE_FORCE      = 1;
+	private static final int LINE_LOOP       = 2;
+	private static final int LINE_INIT       = 3;
+	private static final int LINE_EXACT      = 4;
+	private static final int LINE_NOPS       = 5;
+	private static final int LINE_REGS       = 6;
+	private static final int LINE_NOSAFE     = 7;
+	private static final int LINE_REG_MODIFY = 8;
+	private static final int LINE_COUNT      = 9;
 	
 	private transient Line[] lines;
 	
-	private static final List <ArgContainer> ALL = new ArrayList <>();
-	
 	public ArgContainer() {
-		lines = new Line[LINE_COUNT];
-		lines[TARGET] = new TargetLine();
-		lines[FORCE] = new ForceLine();
-		lines[LOOP] = new LoopLine();
-		lines[INIT] = new InitLine();
-		lines[REGS] = new RegsLine();
-		lines[NOPS] = new NopsLine();
-		lines[NOSAFE] = new NosafeLine();
-		ALL.add(this);
-		System.out.println(ALL);
+		this.lines                  = new Line[LINE_COUNT];
+		this.lines[LINE_TARGET]     = new TargetLine();
+		this.lines[LINE_FORCE]      = new ForceLine();
+		this.lines[LINE_LOOP]       = new LoopLine();
+		this.lines[LINE_INIT]       = new InitLine();
+		this.lines[LINE_EXACT]      = new BoolLine("exact wait:", "return a few ticks to early (at most `reg-cnt + 1´)", "do NOP padding for the last few ticks",
+				LINE_EXACT);
+		this.lines[LINE_NOSAFE]     = new BoolLine("register saving:", "no restore of registers (if only registers below r16 are used r31 contains garbage)",
+				"save and load used registers", LINE_NOSAFE);
+		this.lines[LINE_REGS]       = new RegsLine();
+		this.lines[LINE_NOPS]       = new NopsLine();
+		this.lines[LINE_REG_MODIFY] = new RegModify();
 	}
 	
 	@Override
 	public Line[] getAllLines() {
-		return lines;
+		return this.lines;
 	}
 	
 	@Override
 	public Line getLine(int indx) {
-		return lines[indx];
+		return this.lines[indx];
 	}
 	
 	@Override
@@ -102,53 +77,29 @@ public class ArgContainer implements Arguments {
 	
 	@Override
 	public String[] toArgs() {
-		List <String> args = new ArrayList <>();
-		for (Line line : lines) {
-			String[] zw = line.toArgs();
-			List <String> zwl = Arrays.asList(zw);
+		List<String> args = new ArrayList<>();
+		for (Line line : this.lines) {
+			String[]     zw  = line.toArgs();
+			List<String> zwl = Arrays.asList(zw);
 			args.addAll(zwl);
 		}
 		return args.toArray(new String[args.size()]);
 	}
 	
-	private static class Init {
+	private static class Init implements Serializable {
+		
+		private static final long serialVersionUID = -2716620008993021012L;
 		
 		// @TextValue
 		private String name = null;
 		// @NumberValue
 		private BigInteger time = null;
 		// @ComboValue
-		private int combo = -1;
+		private String combo = "ms";
 		
 		// @StringArray
 		private String[] toStringArray() {
-			String c;
-			switch (combo) {
-			case 0:
-				c = "jear";
-				break;
-			case 1:
-				c = "day";
-				break;
-			case 2:
-				c = "hour";
-				break;
-			case 3:
-				c = "min";
-				break;
-			case 4:
-				c = "sec";
-				break;
-			case 5:
-				c = "ms";
-				break;
-			case 6:
-				c = "tick";
-				break;
-			default:
-				throw new AssertionError("illegal combo index!");
-			}
-			return new String[] {"-init", name, c, time.toString(10) };
+			return new String[] { "-init", this.name, this.combo, this.time.toString(10) };
 		}
 		
 	}
@@ -156,36 +107,35 @@ public class ArgContainer implements Arguments {
 	public class TargetLine extends AbstractLine {
 		
 		public TargetLine() {
-			super(new String[][] {{"del target" }, {"choose target", "Target file" }, {"no file" } });
+			super(new String[][] { { "clear target" }, { "choose target", "Target file" }, { "no file" } });
 		}
 		
 		@Override
 		public GUIArt[] arten() {
-			return new GUIArt[] {GUIArt.deleteButton, GUIArt.fileChoose, GUIArt.choosenFileModifiable };
+			return new GUIArt[] { GUIArt.deleteButton, GUIArt.fileChoose, GUIArt.choosenFileModifiable };
 		}
 		
 		@Override
-		public Object getValue(int index) {
-			return target;
+		public Object getValue(@SuppressWarnings("unused") int index) {
+			return ArgContainer.this.target;
 		}
 		
 		@Override
-		public Class <?> getType(int index) {
+		public Class<?> getType(@SuppressWarnings("unused") int index) {
 			return String.class;
 		}
 		
 		@Override
-		public void setValue(int index, Object val) {
-			target = (String) val;
+		public void setValue(@SuppressWarnings("unused") int index, Object val) {
+			ArgContainer.this.target = (String) val;
 		}
 		
 		@Override
 		public String[] toArgs() {
-			if (target != null) {
-				return new String[] {"-target", target };
-			} else {
-				return new String[0];
+			if (ArgContainer.this.target != null) {
+				return new String[] { "-target", ArgContainer.this.target };
 			}
+			return new String[0];
 		}
 		
 	}
@@ -193,36 +143,35 @@ public class ArgContainer implements Arguments {
 	public class RegsLine extends AbstractLine {
 		
 		public RegsLine() {
-			super(new String[][] {{"del register count" }, {"register count" } });
+			super(new String[][] { { "del register count" }, { "register count" } });
 		}
 		
 		@Override
 		public GUIArt[] arten() {
-			return new GUIArt[] {GUIArt.deleteButton, GUIArt.number };
+			return new GUIArt[] { GUIArt.deleteButton, GUIArt.number };
 		}
 		
 		@Override
-		public Object getValue(int index) {
-			return regs;
+		public Object getValue(@SuppressWarnings("unused") int index) {
+			return ArgContainer.this.regs;
 		}
 		
 		@Override
-		public Class <?> getType(int index) {
+		public Class<?> getType(@SuppressWarnings("unused") int index) {
 			return Integer.class;
 		}
 		
 		@Override
-		public void setValue(int index, Object val) {
-			regs = (Integer) val;
+		public void setValue(@SuppressWarnings("unused") int index, Object val) {
+			ArgContainer.this.regs = (Integer) val;
 		}
 		
 		@Override
 		public String[] toArgs() {
-			if (regs != null) {
-				return new String[] {"-regs", regs.toString() };
-			} else {
-				return new String[0];
+			if (ArgContainer.this.regs != null) {
+				return new String[] { "-regs", ArgContainer.this.regs.toString() };
 			}
+			return new String[0];
 		}
 		
 	}
@@ -230,73 +179,101 @@ public class ArgContainer implements Arguments {
 	public class NopsLine extends AbstractLine {
 		
 		public NopsLine() {
-			super(new String[][] {{"del NOP count" }, {"NOP count" } });
+			super(new String[][] { { "del NOP count" }, { "NOP count" } });
 		}
 		
 		@Override
 		public GUIArt[] arten() {
-			return new GUIArt[] {GUIArt.deleteButton, GUIArt.number };
+			return new GUIArt[] { GUIArt.deleteButton, GUIArt.number };
 		}
 		
 		@Override
-		public Object getValue(int index) {
-			return nops;
+		public Object getValue(@SuppressWarnings("unused") int index) {
+			return ArgContainer.this.nops;
 		}
 		
 		@Override
-		public Class <?> getType(int index) {
+		public Class<?> getType(@SuppressWarnings("unused") int index) {
 			return Integer.class;
 		}
 		
 		@Override
-		public void setValue(int index, Object val) {
-			nops = (Integer) val;
+		public void setValue(@SuppressWarnings("unused") int index, Object val) {
+			ArgContainer.this.nops = (Integer) val;
 		}
 		
 		@Override
 		public String[] toArgs() {
-			if (nops != null) {
-				return new String[] {"-nops", nops.toString() };
-			} else {
-				return new String[0];
+			if (ArgContainer.this.nops != null) {
+				return new String[] { "-nops", ArgContainer.this.nops.toString() };
 			}
+			return new String[0];
 		}
 		
 	}
 	
-	public class NosafeLine extends AbstractLine {
+	public class BoolLine extends AbstractLine {
 		
-		public NosafeLine() {
-			super(new String[][] {{"register safing:" }, {"safe and load used registers", "no safe and no load of used registers" } });
+		private final int line;
+		
+		public BoolLine(String label, String yes, String no, int line) {
+			super(new String[][] { { label }, { no, yes } });
+			this.line = line;
 		}
 		
 		@Override
 		public GUIArt[] arten() {
-			return new GUIArt[] {GUIArt.unmodifiableText, GUIArt.comboBoxFalseTrue};
+			return new GUIArt[] { GUIArt.unmodifiableText, GUIArt.comboBox };
 		}
 		
 		@Override
-		public Object getValue(int index) {
-			return nosafe;
+		public Object getValue(@SuppressWarnings("unused") int index) {
+			switch (this.line) {
+			case LINE_EXACT:
+				return Boolean.valueOf(ArgContainer.this.exact);
+			case LINE_NOSAFE:
+				return Boolean.valueOf(ArgContainer.this.nosafe);
+			default:
+				throw new AssertionError("illegal line: " + this.line);
+			}
 		}
 		
 		@Override
-		public Class <?> getType(int index) {
+		public Class<?> getType(@SuppressWarnings("unused") int index) {
 			return Boolean.TYPE;
 		}
 		
 		@Override
-		public void setValue(int index, Object val) {
-			nosafe = (boolean) (Boolean) val;
+		public void setValue(@SuppressWarnings("unused") int index, Object val) {
+			switch (this.line) {
+			case LINE_EXACT:
+				ArgContainer.this.exact = ((Boolean) val).booleanValue();
+				break;
+			case LINE_NOSAFE:
+				ArgContainer.this.nosafe = ((Boolean) val).booleanValue();
+				break;
+			default:
+				throw new AssertionError("illegal line: " + this.line);
+			}
 		}
 		
 		@Override
 		public String[] toArgs() {
-			if (nosafe) {
-				return new String[] {"-nosafe" };
-			} else {
-				return new String[0];
+			switch (this.line) {
+			case LINE_EXACT:
+				if (ArgContainer.this.nosafe) {
+					return new String[] { "-exact" };
+				}
+				break;
+			case LINE_NOSAFE:
+				if (ArgContainer.this.nosafe) {
+					return new String[] { "-nosafe" };
+				}
+				break;
+			default:
+				throw new AssertionError("illegal line: " + this.line);
 			}
+			return new String[0];
 		}
 		
 	}
@@ -304,36 +281,35 @@ public class ArgContainer implements Arguments {
 	public class LoopLine extends AbstractLine {
 		
 		public LoopLine() {
-			super(new String[][] {{"del loop label" }, {"loop label" } });
+			super(new String[][] { { "del loop label" }, { "loop label" } });
 		}
 		
 		@Override
 		public GUIArt[] arten() {
-			return new GUIArt[] {GUIArt.deleteButton, GUIArt.modifiableText };
+			return new GUIArt[] { GUIArt.deleteButton, GUIArt.modifiableText };
 		}
 		
 		@Override
-		public Object getValue(int index) {
-			return loop;
+		public Object getValue(@SuppressWarnings("unused") int index) {
+			return ArgContainer.this.loop;
 		}
 		
 		@Override
-		public Class <?> getType(int index) {
+		public Class<?> getType(@SuppressWarnings("unused") int index) {
 			return String.class;
 		}
 		
 		@Override
-		public void setValue(int index, Object val) {
-			loop = (String) val;
+		public void setValue(@SuppressWarnings("unused") int index, Object val) {
+			ArgContainer.this.loop = (String) val;
 		}
 		
 		@Override
 		public String[] toArgs() {
-			if (loop != null) {
-				return new String[] {"-loop", loop };
-			} else {
-				return new String[0];
+			if (ArgContainer.this.loop != null) {
+				return new String[] { "-loop", ArgContainer.this.loop };
 			}
+			return new String[0];
 		}
 		
 	}
@@ -341,27 +317,30 @@ public class ArgContainer implements Arguments {
 	public class InitLine extends AbstractLine {
 		
 		public InitLine() {
-			super(new String[][] {{"del init lines" }, {"manage inits", "init lines", "add new init", "rem all inits" } });
+			super(new String[][] { { "reset init lines" }, { "manage inits", "init lines", "add new init", "rem all inits" } });
 		}
 		
 		@Override
 		public GUIArt[] arten() {
-			return new GUIArt[] {GUIArt.deleteButton, GUIArt.ownWindow };
+			return new GUIArt[] { GUIArt.deleteButton, GUIArt.ownWindow };
 		}
 		
 		@Override
-		public Object getValue(int index) {
+		public Object getValue(@SuppressWarnings("unused") int index) {
 			return null;
 		}
 		
 		@Override
-		public Class <?> getType(int index) {
+		public Class<?> getType(@SuppressWarnings("unused") int index) {
 			return null;
 		}
 		
 		@Override
-		public void setValue(int index, Object val) {
-			throw new UnsupportedOperationException("setValue(int,Object) " + getClass().getName());
+		public void setValue(@SuppressWarnings("unused") int index, Object val) {
+			if (val != null) {
+				throw new UnsupportedOperationException("setValue(int,Object) " + getClass().getName());
+			}
+			ArgContainer.this.init = null;
 		}
 		
 		@Override
@@ -369,18 +348,18 @@ public class ArgContainer implements Arguments {
 			if (index != 1) {
 				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (addLine)");
 			}
-			init = Arrays.copyOf(init, init.length + 1);
-			init[init.length - 1] = new Init();
+			ArgContainer.this.init                                    = Arrays.copyOf(ArgContainer.this.init, ArgContainer.this.init.length + 1);
+			ArgContainer.this.init[ArgContainer.this.init.length - 1] = new Init();
 		}
 		
 		@Override
 		public void initSubLines() {
-			if (init == null) {
-				init = new Init[0];
+			if (ArgContainer.this.init == null) {
+				ArgContainer.this.init = new Init[0];
 			}
-			for (int i = 0; i < init.length; i ++ ) {
-				if (init[i] == null) {
-					init[i] = new Init();
+			for (int i = 0; i < ArgContainer.this.init.length; i++) {
+				if (ArgContainer.this.init[i] == null) {
+					ArgContainer.this.init[i] = new Init();
 				}
 			}
 		}
@@ -390,7 +369,7 @@ public class ArgContainer implements Arguments {
 			if (index != 1) {
 				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (addLine)");
 			}
-			init = new Init[0];
+			ArgContainer.this.init = null;
 		}
 		
 		@Override
@@ -398,25 +377,26 @@ public class ArgContainer implements Arguments {
 			if (index != 1) {
 				throw new IllegalArgumentException("index=" + index + " only 1 is supported! (addLine)");
 			}
-			Line[] lines = new Line[init.length];
-			for (int i = 0; i < lines.length; i ++ ) {
+			Line[] subLines = new Line[ArgContainer.this.init.length];
+			for (int i = 0; i < subLines.length; i++) {
 				final int constI = i;
-				lines[i] = new AbstractLine(new String[][] {{"del init label" }, {"init label name" }, {"jear", "day", "hour", "min", "sec", "ms", "tick" }, {"time count" } }) {
+				subLines[i] = new AbstractLine(
+						new String[][] { { "del init label" }, { "init label name" }, { "year", "day", "hour", "min", "sec", "ms", "tick" }, { "time count" } }) {
 					
 					@Override
 					public GUIArt[] arten() {
-						return new GUIArt[] {GUIArt.deleteButton, GUIArt.modifiableText, GUIArt.comboBoxFalseTrue, GUIArt.number };
+						return new GUIArt[] { GUIArt.deleteButton, GUIArt.modifiableText, GUIArt.comboBox, GUIArt.number };
 					}
 					
 					@Override
 					public boolean hasValue(int index) {
 						switch (index) {
 						case 1:
-							return init[constI].name != null;
+							return ArgContainer.this.init[constI].name != null;
 						case 2:
-							return init[constI].combo != -1;
+							return ArgContainer.this.init[constI].combo != null;
 						case 3:
-							return init[constI].time != null;
+							return ArgContainer.this.init[constI].time != null;
 						default:
 							throw new IllegalArgumentException("index=" + index + " only 1, 2 and 3 are supported! (addLine)");
 						}
@@ -426,13 +406,13 @@ public class ArgContainer implements Arguments {
 					public void setValue(int index, Object val) {
 						switch (index) {
 						case 1:
-							init[constI].name = (String) val;
+							ArgContainer.this.init[constI].name = (String) val;
 							break;
 						case 2:
-							init[constI].combo = (int) (Integer) val;
+							ArgContainer.this.init[constI].combo = (String) val;
 							break;
 						case 3:
-							init[constI].time = (BigInteger) val;
+							ArgContainer.this.init[constI].time = (BigInteger) val;
 							break;
 						default:
 							throw new IllegalArgumentException("index=" + index + " only 1, 2 and 3 are supported! (addLine)");
@@ -441,29 +421,25 @@ public class ArgContainer implements Arguments {
 					
 					@Override
 					public Object getValue(int index) {
-//						System.err.println(init);
-//						System.err.println(Arrays.deepToString(init));
-//						System.err.println(init.length);
-//						System.err.println(init[constI]);
 						switch (index) {
 						case 1:
-							return init[constI].name;
+							return ArgContainer.this.init[constI].name;
 						case 2:
-							return init[constI].combo;
+							return ArgContainer.this.init[constI].combo;
 						case 3:
-							return init[constI].time;
+							return ArgContainer.this.init[constI].time;
 						default:
-							throw new IllegalArgumentException("index=" + index + " only 1, 2 and 3 are supported! (addLine)");
+							throw new IllegalArgumentException("index=" + index + " only 1, 2 and 3 are supported! (getValue)");
 						}
 					}
 					
 					@Override
-					public Class <?> getType(int index) {
+					public Class<?> getType(int index) {
 						switch (index) {
 						case 1:
 							return String.class;
 						case 2:
-							return Integer.TYPE;
+							return String.class;
 						case 3:
 							return BigInteger.class;
 						default:
@@ -473,15 +449,15 @@ public class ArgContainer implements Arguments {
 					
 				};
 			}
-			return lines;
+			return subLines;
 		}
 		
 		@Override
 		public String[] toArgs() {
-			List <String> args = new ArrayList <>();
-			for (Init init : init) {
-				String[] sa = init.toStringArray();
-				List <String> sal = Arrays.asList(sa);
+			List<String> args = new ArrayList<>();
+			for (Init initVal : ArgContainer.this.init) {
+				String[]     sa  = initVal.toStringArray();
+				List<String> sal = Arrays.asList(sa);
 				args.addAll(sal);
 			}
 			return args.toArray(new String[args.size()]);
@@ -492,36 +468,234 @@ public class ArgContainer implements Arguments {
 	public class ForceLine extends AbstractLine {
 		
 		public ForceLine() {
-			super(new String[][] {{"if target exist:" }, {"exit programm", "overwrite it" } });
+			super(new String[][] { { "if target exist:" }, { "exit programm", "overwrite it" } });
 		}
 		
 		@Override
 		public GUIArt[] arten() {
-			return new GUIArt[] {GUIArt.unmodifiableText, GUIArt.comboBoxFalseTrue };
+			return new GUIArt[] { GUIArt.unmodifiableText, GUIArt.comboBox };
 		}
 		
 		@Override
-		public Object getValue(int index) {
-			return force;
+		public Object getValue(@SuppressWarnings("unused") int index) {
+			return Boolean.valueOf(ArgContainer.this.force);
 		}
 		
 		@Override
-		public Class <?> getType(int index) {
+		public Class<?> getType(@SuppressWarnings("unused") int index) {
 			return Boolean.TYPE;
 		}
 		
 		@Override
-		public void setValue(int index, Object val) {
-			force = (boolean) (Boolean) val;
+		public void setValue(@SuppressWarnings("unused") int index, Object val) {
+			ArgContainer.this.force = ((Boolean) val).booleanValue();
 		}
 		
 		@Override
 		public String[] toArgs() {
-			if (force) {
-				return new String[] {"-force" };
-			} else {
-				return new String[0];
+			if (ArgContainer.this.force) {
+				return new String[] { "-force" };
 			}
+			return new String[0];
+		}
+		
+	}
+	
+	
+	private static String[] regModifyComboBoxVals() {
+		String[] res = new String[CodeGenerator.MAX_REG_CNT];
+		for (int i = 0; i < res.length; i++) {
+			res[i] = CodeGenerator.register(i);
+		}
+		return res;
+	}
+	
+	public class RegModify extends AbstractLine {
+		
+		public RegModify() {
+			super(new String[][] { //
+					{ "first register:" }, //
+					regModifyComboBoxVals(), //
+					{ "reset register modifications" }, //
+					{ "manage register modifications", "init lines", "modify another register", "rem all modifications" } //
+			});
+		}
+		
+		@Override
+		public GUIArt[] arten() {
+			return new GUIArt[] { GUIArt.unmodifiableText, GUIArt.comboBox, GUIArt.deleteButton, GUIArt.ownWindow };
+		}
+		
+		@Override
+		public Object getValue(int index) {
+			if (index == 1) {
+				return ArgContainer.this.firstReg;
+			}
+			return null;
+		}
+		
+		@Override
+		public Class<?> getType(int index) {
+			if (index == 1) {
+				return String.class;
+			}
+			return null;
+		}
+		
+		@Override
+		public void setValue(int index, Object val) {
+			switch (index) {
+			case 1:
+				String sval = (String) val;
+				if (sval != null) {
+					if (ArgContainer.this.modifyReg == null) {
+						if (!sval.startsWith("R") || !sval.matches("R(0|[12][0-9]?|3[01]?|[4-9])")) {
+							return;
+						}
+					} else if (!ArgContainer.this.modifyReg.containsValue(sval)
+							&& (!sval.startsWith("R") || !sval.matches("R(0|[12][0-9]?|3[01]?|[4-9])") || ArgContainer.this.modifyReg.containsKey(sval))) {
+								return;
+							}
+				}
+				ArgContainer.this.firstReg = sval;
+				break;
+			case 2:
+				if (val != null) {
+					throw new IllegalArgumentException("only delete allowed here");
+				}
+				ArgContainer.this.modifyReg = null;
+				break;
+			default:
+				throw new IllegalArgumentException("illegal index: " + index);
+			}
+		}
+		
+		@Override
+		public void addLine(int index) {
+			if (index != 3) {
+				throw new IllegalArgumentException("index=" + index + " only 3 is supported! (addLine)");
+			}
+			if (ArgContainer.this.modifyReg == null) {
+				ArgContainer.this.modifyReg = new LinkedHashMap<>();
+			}
+			if (ArgContainer.this.modifyReg.size() >= CodeGenerator.MAX_REG_CNT) {
+				return;
+			}
+			for (int r = 0;; r++) {
+				String name = CodeGenerator.register(r);
+				if (ArgContainer.this.modifyReg.putIfAbsent(name, name) == null) {
+					break;
+				}
+			}
+		}
+		
+		@Override
+		public void removeAllLines(int index) {
+			if (index != 3) {
+				throw new IllegalArgumentException("index=" + index + " only 3 is supported! (addLine)");
+			}
+			ArgContainer.this.modifyReg = null;
+		}
+		
+		@Override
+		public void initSubLines() {
+			if (ArgContainer.this.modifyReg == null) {
+				addLine(3);
+			}
+		}
+		
+		@Override
+		public Line[] subLines(int index) {
+			if (index != 3) {
+				throw new IllegalArgumentException("index=" + index + " only 3 is supported! (addLine)");
+			}
+			initSubLines();
+			Line[]                          subLines = new Line[ArgContainer.this.modifyReg.size()];
+			Iterator<Entry<String, String>> iter     = ArgContainer.this.modifyReg.entrySet().iterator();
+			for (int i = 0; i < subLines.length; i++) {
+				Entry<String, String> e    = iter.next();
+				final String          key0 = e.getKey();
+				subLines[i] = new AbstractLine(
+						new String[][] { { "del reg rename" }, { key0 }, { "year", "day", "hour", "min", "sec", "ms", "tick" }, { "time count" } }) {
+					
+					String key = key0;
+					
+					@Override
+					public GUIArt[] arten() {
+						return new GUIArt[] { GUIArt.deleteButton, GUIArt.comboBox, GUIArt.modifiableText };
+					}
+					
+					@Override
+					public void setValue(int index, Object val) {
+						switch (index) {
+						case 0:
+							if (val != null) {
+								throw new IllegalArgumentException("only delete allowed here");
+							}
+							ArgContainer.this.modifyReg.remove(this.key);
+							break;
+						case 1:
+							String sval = (String) val;
+							if (ArgContainer.this.modifyReg.containsKey(sval)) {
+								break;
+							}
+							String value = ArgContainer.this.modifyReg.remove(this.key);
+							ArgContainer.this.modifyReg.put(sval, value);
+							break;
+						case 2:
+							ArgContainer.this.modifyReg.put(this.key, (String) val);
+							break;
+						default:
+							throw new IllegalArgumentException("index=" + index + " only 1, 2 and 3 are supported! (addLine)");
+						}
+					}
+					
+					@Override
+					public Object getValue(int index) {
+						switch (index) {
+						case 1:
+							return this.key;
+						case 2:
+							return ArgContainer.this.modifyReg.get(this.key);
+						default:
+							throw new IllegalArgumentException("index=" + index + " only 1, 2 and 3 are supported! (getValue)");
+						}
+					}
+					
+					@Override
+					public Class<?> getType(int index) {
+						switch (index) {
+						case 1:
+							return String.class;
+						case 2:
+							return String.class;
+						default:
+							throw new IllegalArgumentException("index=" + index + " only 1, 2 and 3 are supported! (addLine)");
+						}
+					}
+					
+				};
+			}
+			return subLines;
+		}
+		
+		@Override
+		public String[] toArgs() {
+			List<String> args = new ArrayList<>();
+			if (ArgContainer.this.firstReg != null) {
+				args.add("-first");
+				args.add(ArgContainer.this.firstReg);
+			}
+			if (ArgContainer.this.modifyReg != null) {
+				args.add("-set-names");
+				args.add("\0");
+				for (Entry<String, String> renameReg : ArgContainer.this.modifyReg.entrySet()) {
+					args.add(renameReg.getKey());
+					args.add(renameReg.getValue());
+				}
+				args.add("\0");
+			}
+			return args.toArray(new String[args.size()]);
 		}
 		
 	}
