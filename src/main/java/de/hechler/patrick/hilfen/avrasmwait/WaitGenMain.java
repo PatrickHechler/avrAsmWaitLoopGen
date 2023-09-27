@@ -14,7 +14,7 @@ import de.hechler.patrick.hilfen.avrasmwait.interfaces.CodeGenerator;
 import de.hechler.patrick.hilfen.avrasmwait.objects.SimpleCodeGeneratorImpl;
 
 @SuppressWarnings("javadoc")
-public class Main {
+public class WaitGenMain {
 	
 	public static String[] REGISTER_NAMES = new String[CodeGenerator.MAX_REG_CNT];
 	
@@ -27,8 +27,8 @@ public class Main {
 	public static void main(String[] args) {
 		try {
 			if (args.length == 0) {
-				System.err.println("[LOG] no args start gui");
-				AutoArgGUIFrame ag = new AutoArgGUIFrame("ENTER ARGS", Main::main, new ArgContainer());
+				System.err.println("[WaitGenMain]: no args start gui");
+				AutoArgGUIFrame ag = new AutoArgGUIFrame("ENTER ARGS", WaitGenMain::main, new ArgContainer());
 				ag.load("completed the Code generation", "FINISH");
 				return;
 			}
@@ -188,6 +188,7 @@ public class Main {
 					exit("not enough args for option <-set-names>", i - 1, args);
 				}
 				String magic = args[i];
+				String[] tmpRegs = new String[CodeGenerator.MAX_REG_CNT];
 				while (true) {
 					if (++i >= args.length) {
 						exit("not enough args for option <-set-names>", i - 1, args);
@@ -195,11 +196,16 @@ public class Main {
 					if (magic.equals(args[i])) {
 						break;
 					}
-					int reg = findRegister(args[i], "", -1, args);
+					int reg = findRegister(args[i], tmpRegs, "", -1, args);
 					if (++i >= args.length) {
 						exit("not enough args for option <-set-names>", i - 1, args);
 					}
-					REGISTER_NAMES[reg] = args[i];
+					tmpRegs[reg] = args[i];
+				}
+				for (int ii = 0; ii < tmpRegs.length; ii++) {
+					if (tmpRegs[ii] != null) {
+						REGISTER_NAMES[ii] = tmpRegs[ii];
+					}
 				}
 				break;
 			default:
@@ -209,7 +215,7 @@ public class Main {
 		if (nops == -1) {
 			nops = 0;
 		}
-		int first0 = first != null ? findRegister(first, " first", -1, args) : 0;
+		int first0 = first != null ? findRegister(first, null, " first", -1, args) : 0;
 		if (regs == -1) {
 			regs = SimpleCodeGeneratorImpl.minRegCnt(max, !nosafe, nops);
 		}
@@ -225,19 +231,26 @@ public class Main {
 			}
 			out = new PrintStream(target);
 		}
-		cg            = SimpleCodeGeneratorImpl.create(out, first0, regs, !nosafe, exactVals, loop, nops);
-		Main.labels   = labels.toArray(new String[labels.size()]);
-		Main.tickCnts = tickCnts.toArray(new BigInteger[tickCnts.size()]);
+		cg                   = SimpleCodeGeneratorImpl.create(out, first0, regs, !nosafe, exactVals, loop, nops);
+		WaitGenMain.labels   = labels.toArray(new String[labels.size()]);
+		WaitGenMain.tickCnts = tickCnts.toArray(new BigInteger[tickCnts.size()]);
 	}
 	
-	private static int findRegister(String name, String type, int i, String[] args) {
+	private static int findRegister(String name, String[] ignore, String type, int argI, String[] args) {
 		int reg = 0;
 		while (true) {
-			if (name.equals(CodeGenerator.register(reg))) {
+			if ((ignore == null || ignore[reg] == null) && name.equals(CodeGenerator.register(reg))) {
 				break;
 			}
-			if (++reg > CodeGenerator.MAX_REG_CNT) {
-				exit("unknown" + type + " register: '" + name + "' (registers: " + Arrays.toString(REGISTER_NAMES) + ")", i, args);
+			if (++reg >= CodeGenerator.MAX_REG_CNT) {
+				if (ignore != null) {
+					while (--reg >= 0) {
+						if (ignore[reg] != null) {
+							REGISTER_NAMES[reg] = "<ignored (" + REGISTER_NAMES[reg] + ")>";
+						}
+					}
+				}
+				exit("unknown" + type + " register: '" + name + "' (registers: " + Arrays.toString(REGISTER_NAMES) + ")", argI, args);
 			}
 		}
 		return reg;

@@ -2,15 +2,14 @@ package de.hechler.patrick.hilfen.avrasmwait;
 
 import java.io.Serializable;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import de.hechler.patrick.hilfen.autoarggui.enums.GUIArt;
+import de.hechler.patrick.hilfen.autoarggui.interfaces.ArgList;
 import de.hechler.patrick.hilfen.autoarggui.interfaces.Arguments;
 import de.hechler.patrick.hilfen.autoarggui.interfaces.Line;
 import de.hechler.patrick.hilfen.autoarggui.objects.AbstractLine;
@@ -76,28 +75,22 @@ public class ArgContainer implements Arguments, Serializable {
 	}
 	
 	@Override
-	public String[] toArgs() {
-		List<String> args = new ArrayList<>();
+	public ArgList toArgList() {
+		ArgList args = new ArgList();
 		for (Line line : this.lines) {
-			String[]     zw  = line.toArgs();
-			List<String> zwl = Arrays.asList(zw);
-			args.addAll(zwl);
+			line.addArgs(args);
 		}
-		return args.toArray(new String[args.size()]);
+		return args;
 	}
 	
 	private static class Init implements Serializable {
 		
 		private static final long serialVersionUID = -2716620008993021012L;
 		
-		// @TextValue
-		private String name = null;
-		// @NumberValue
-		private BigInteger time = null;
-		// @ComboValue
-		private String combo = "ms";
+		private String     name  = null;
+		private BigInteger time  = null;
+		private String     combo = "ms";
 		
-		// @StringArray
 		private String[] toStringArray() {
 			return new String[] { "-init", this.name, this.combo, this.time.toString(10) };
 		}
@@ -131,11 +124,10 @@ public class ArgContainer implements Arguments, Serializable {
 		}
 		
 		@Override
-		public String[] toArgs() {
+		public void addArgs(ArgList list) {
 			if (ArgContainer.this.target != null) {
-				return new String[] { "-target", ArgContainer.this.target };
+				list.add("-target", ArgContainer.this.target);
 			}
-			return new String[0];
 		}
 		
 	}
@@ -167,11 +159,10 @@ public class ArgContainer implements Arguments, Serializable {
 		}
 		
 		@Override
-		public String[] toArgs() {
+		public void addArgs(ArgList list) {
 			if (ArgContainer.this.regs != null) {
-				return new String[] { "-regs", ArgContainer.this.regs.toString() };
+				list.add("-regs", ArgContainer.this.regs.toString());
 			}
-			return new String[0];
 		}
 		
 	}
@@ -203,11 +194,10 @@ public class ArgContainer implements Arguments, Serializable {
 		}
 		
 		@Override
-		public String[] toArgs() {
+		public void addArgs(ArgList list) {
 			if (ArgContainer.this.nops != null) {
-				return new String[] { "-nops", ArgContainer.this.nops.toString() };
+				list.add("-nops", ArgContainer.this.nops.toString());
 			}
-			return new String[0];
 		}
 		
 	}
@@ -258,22 +248,21 @@ public class ArgContainer implements Arguments, Serializable {
 		}
 		
 		@Override
-		public String[] toArgs() {
+		public void addArgs(ArgList list) {
 			switch (this.line) {
 			case LINE_EXACT:
 				if (ArgContainer.this.nosafe) {
-					return new String[] { "-exact" };
+					list.add("-exact");
 				}
 				break;
 			case LINE_NOSAFE:
 				if (ArgContainer.this.nosafe) {
-					return new String[] { "-nosafe" };
+					list.add("-nosafe");
 				}
 				break;
 			default:
 				throw new AssertionError("illegal line: " + this.line);
 			}
-			return new String[0];
 		}
 		
 	}
@@ -305,11 +294,10 @@ public class ArgContainer implements Arguments, Serializable {
 		}
 		
 		@Override
-		public String[] toArgs() {
+		public void addArgs(ArgList list) {
 			if (ArgContainer.this.loop != null) {
-				return new String[] { "-loop", ArgContainer.this.loop };
+				list.add("-loop", ArgContainer.this.loop);
 			}
-			return new String[0];
 		}
 		
 	}
@@ -453,14 +441,11 @@ public class ArgContainer implements Arguments, Serializable {
 		}
 		
 		@Override
-		public String[] toArgs() {
-			List<String> args = new ArrayList<>();
+		public void addArgs(ArgList list) {
 			for (Init initVal : ArgContainer.this.init) {
-				String[]     sa  = initVal.toStringArray();
-				List<String> sal = Arrays.asList(sa);
-				args.addAll(sal);
+				String[] sa = initVal.toStringArray();
+				list.add(sa);
 			}
-			return args.toArray(new String[args.size()]);
 		}
 		
 	}
@@ -492,11 +477,10 @@ public class ArgContainer implements Arguments, Serializable {
 		}
 		
 		@Override
-		public String[] toArgs() {
+		public void addArgs(ArgList list) {
 			if (ArgContainer.this.force) {
-				return new String[] { "-force" };
+				list.add("-force");
 			}
-			return new String[0];
 		}
 		
 	}
@@ -680,22 +664,20 @@ public class ArgContainer implements Arguments, Serializable {
 		}
 		
 		@Override
-		public String[] toArgs() {
-			List<String> args = new ArrayList<>();
+		public void addArgs(ArgList list) {
 			if (ArgContainer.this.firstReg != null) {
-				args.add("-first");
-				args.add(ArgContainer.this.firstReg);
+				list.add("-first");
+				list.add(ArgContainer.this.firstReg);
 			}
 			if (ArgContainer.this.modifyReg != null) {
-				args.add("-set-names");
-				args.add("\0");
+				list.add("-set-names");
+				list.add("");
 				for (Entry<String, String> renameReg : ArgContainer.this.modifyReg.entrySet()) {
-					args.add(renameReg.getKey());
-					args.add(renameReg.getValue());
+					list.add(renameReg.getKey());
+					list.add(renameReg.getValue());
 				}
-				args.add("\0");
+				list.add("");
 			}
-			return args.toArray(new String[args.size()]);
 		}
 		
 	}

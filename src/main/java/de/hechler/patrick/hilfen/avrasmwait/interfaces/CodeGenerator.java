@@ -1,6 +1,6 @@
 package de.hechler.patrick.hilfen.avrasmwait.interfaces;
 
-import static de.hechler.patrick.hilfen.avrasmwait.Main.REGISTER_NAMES;
+import static de.hechler.patrick.hilfen.avrasmwait.WaitGenMain.REGISTER_NAMES;
 
 import java.math.BigInteger;
 import java.util.Set;

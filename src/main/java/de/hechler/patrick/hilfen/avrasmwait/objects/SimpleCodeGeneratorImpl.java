@@ -110,12 +110,31 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 	}
 	
 	@Override
+	public String generateInitAndLoop(BigInteger ticks, Set<String> alreadyUsed) {
+		String label = "wait_0x" + ticks.toString(16) + "t_" + this.loopLabel;
+		while (!alreadyUsed.add(label) || label.equals(this.loopLabel)) {
+			label = label.concat("_");
+		}
+		generateInitAndLoop(ticks, label);
+		return label;
+	}
+	
+	@Override
+	public void generateInitAndLoop(BigInteger ticks, String initLabelName) {
+		ticks = ticks.add(BigInteger.valueOf(3L));
+		if (ticks.compareTo(this.maxTicks) > 0) {
+			CodeGenerator.super.generateInitAndLoop(ticks, initLabelName);
+		} else {
+			generateInit(ticks, initLabelName, true);
+			generateLoop();
+		}
+	}
+	
+	@Override
 	public String generateInit(BigInteger ticks, Set<String> alreadyUsed) {
-		StringBuilder sb = new StringBuilder();
-		sb.append(this.loopLabel).append("_HEX_").append(ticks.toString(16));
-		String label = sb.toString();
-		if (!alreadyUsed.add(label) || label.equals(this.loopLabel)) {
-			throw new IllegalArgumentException("label-name already used: '" + label + "' used: '" + alreadyUsed + "' loop-label: '" + this.loopLabel + "'");
+		String label = "wait_0x" + ticks.toString(16) + "t_" + this.loopLabel;
+		while (!alreadyUsed.add(label) || label.equals(this.loopLabel)) {
+			label = label.concat("_");
 		}
 		generateInit(ticks, label);
 		return label;
@@ -123,6 +142,10 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 	
 	@Override
 	public void generateInit(BigInteger ticks, String initLabelName) {
+		generateInit(ticks, initLabelName, false);
+	}
+	
+	public void generateInit(BigInteger ticks, String initLabelName, boolean suppressJump) {
 		if (this.loopLabel.equals(initLabelName)) {
 			throw new IllegalArgumentException("label-name already used as the loop-label: '" + initLabelName + "' loop-label: '" + this.loopLabel + "'");
 		}
@@ -169,7 +192,9 @@ public class SimpleCodeGeneratorImpl implements CodeGenerator {
 				this.out.println("\tLDI " + regName + ", 0x0" + str);
 			}
 		}
-		this.out.println("\tJMP " + this.loopLabel);
+		if (!suppressJump) {
+			this.out.println("\tJMP " + this.loopLabel);
+		}
 	}
 	
 	@Override
